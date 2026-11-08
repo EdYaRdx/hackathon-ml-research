@@ -1,0 +1,22 @@
+# Python bytecode and environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Local credentials
+.env
+.env.*
+!.env.example
+
+# Local datasets and caches (never publish upstream project content)
+/data/
+.cache/
+cache/
+*.parquet
+*.jsonl
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
