@@ -1,8 +1,8 @@
 # Hackathon ML Research
 
-Исследовательский учебный проект о связи характеристик хакатонных проектов с результатами. Текущий этап — аудит пригодности открытых данных, а не разработка системы оценки проектов.
+Исследовательский учебный проект о связи характеристик хакатонных проектов с результатами. Завершены аудит данных, EDA, ретроспективный metadata baseline и его независимый review; объективное оценивание проектов не является целью.
 
-**Статус:** Research / Data Audit completed. ML-модель ещё не обучалась.
+**Статус:** Data Audit, EDA, Technology ML Baseline и Independent Review завершены.
 
 ## Исследовательская гипотеза
 
@@ -48,6 +48,41 @@ python data_audit.py --no-devpost-check
 
 Скрипт формирует `data_audit_report.md` и `data_audit_summary.csv`. Локальный каталог `data/` исключён из Git.
 
-## Текущий вывод
+## EDA и Technology ML Baseline
 
-**GO условно** только для ограниченного metadata-only пилота после фиксации момента прогноза и группового разбиения по хакатонам. Ветка metadata + repository structure требует отдельной проверки общего поднабора. LLM-признаки отложены. Репрезентативность результатов по всем хакатонам не установлена.
+**EDA — completed.** Отчёт: [`data_quality_eda_report.md`](data_quality_eda_report.md). В нём есть графики [`eda_event_winner_share.svg`](eda_event_winner_share.svg), [`eda_top_technologies.svg`](eda_top_technologies.svg), [`eda_text_lengths.svg`](eda_text_lengths.svg), [`eda_link_coverage.svg`](eda_link_coverage.svg), а также агрегаты и feature inventory. Исходные тексты, URL-проверки и построчная аналитическая таблица остаются в игнорируемом `data/`.
+
+**Technology ML Baseline — completed.** Сравнение `DummyClassifier(strategy="prior")` и `LogisticRegression` по восьми leave-one-hackathon-out folds: **2 161 проект**, **macro AP 0,243 против 0,178**; у LogisticRegression **recall 0,047 при пороге 0,5**. Детали: [`technology_baseline_report.md`](technology_baseline_report.md), [результаты по folds](technology_baseline_results.csv), [коэффициенты](technology_baseline_coefficients.csv), [сводка технологий](technology_tag_summary.csv).
+
+**Independent Review — completed.** Read-only аудит и план самостоятельной NumPy-реализации: [`baseline_review.md`](baseline_review.md). Подтверждённых ошибок текущих метрик не найдено; pooled AP отмечен как описательная сводка из-за объединения scores отдельных fold-моделей.
+
+## Воспроизведение EDA и baseline
+
+При отсутствии локального кэша получить закреплённый snapshot и пропустить Devpost-запросы:
+
+```bash
+python data_audit.py --no-devpost-check
+```
+
+EDA использует Python 3.10+ и стандартную библиотеку; эта команда создаёт локальную аналитическую таблицу для baseline и публикуемые агрегаты. Чтобы не отправлять HTTP-запросы при повторе:
+
+```bash
+python data_quality_eda.py --skip-link-checks
+```
+
+Baseline требует Python 3.12 и версии NumPy, pandas и scikit-learn из [`requirements-ml.txt`](requirements-ml.txt):
+
+```bash
+python -m venv .venv
+# Windows
+.venv\\Scripts\\python.exe -m pip install -r requirements-ml.txt
+.venv\\Scripts\\python.exe technology_baseline.py
+# macOS/Linux: используйте .venv/bin/python вместо .venv\\Scripts\\python.exe
+```
+
+Исходный датасет, кэши и индивидуальные строки не публикуются; каталог `data/` исключён из Git.
+
+
+## Итог и ограничения
+
+Это ретроспективное исследование snapshot, а не подтверждённый прогноз победителей до судейства. Историческая доступность `built_with` не подтверждена; независимая проверка меток Devpost не состоялась из-за HTTP 403. В оценке только **8 событий**, поэтому результат нельзя обобщать на новые хакатоны. AP выше у LogisticRegression во всех восьми folds, но recall при фиксированном пороге низкий; причинные выводы не делаются.
