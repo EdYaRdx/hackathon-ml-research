@@ -1,0 +1,4 @@
+﻿link_type,host_category,status,checks
+github,github.com,http_200,10
+github,github.com,http_404,1
+video,youtube,http_200,10
