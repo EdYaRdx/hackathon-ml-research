@@ -75,9 +75,9 @@ Baseline требует Python 3.12 и версии NumPy, pandas и scikit-lear
 ```bash
 python -m venv .venv
 # Windows
-.venv\\Scripts\\python.exe -m pip install -r requirements-ml.txt
-.venv\\Scripts\\python.exe technology_baseline.py
-# macOS/Linux: используйте .venv/bin/python вместо .venv\\Scripts\\python.exe
+.venv\Scripts\python.exe -m pip install -r requirements-ml.txt
+.venv\Scripts\python.exe technology_baseline.py
+# macOS/Linux: используйте .venv/bin/python вместо .venv\Scripts\python.exe
 ```
 
 Исходный датасет, кэши и индивидуальные строки не публикуются; каталог `data/` исключён из Git.
