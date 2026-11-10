@@ -4,7 +4,7 @@
 
 ## 1. ML pipeline
 
-`technology_baseline.py` читает закреплённый JSONL snapshot и уже подготовленную `data/processed/analytical_projects.csv`. Из исходного JSONL в эксперимент переносится только `project_id` и `built_with`; эти данные соединяются one-to-one по ID. Метка берётся из `outcome` аналитической таблицы. Исходные `results`, описания, README, URL и другие поля не входят в матрицу признаков.
+`../experiments/technology_baseline.py` читает закреплённый JSONL snapshot и уже подготовленную `../data/processed/analytical_projects.csv`. Из исходного JSONL в эксперимент переносится только `project_id` и `built_with`; эти данные соединяются one-to-one по ID. Метка берётся из `outcome` аналитической таблицы. Исходные `results`, описания, README, URL и другие поля не входят в матрицу признаков.
 
 Независимое сопоставление ID подтвердило: в источнике 2 222 уникальных проекта, из них 61 HackTech 2026; в аналитической таблице 2 161 проект, нет HackTech ID, все остальные 2 161 source ID присутствуют, лишних ID нет. Классы совпали с аудитом источника: 363 winners и 1 798 non-winners.
 
@@ -34,7 +34,7 @@
 
 Precision, recall и F1 рассчитаны для положительного класса winner при фиксированном пороге 0.5. AP рассчитан по непрерывному `predict_proba`. Macro — простое среднее восьми event-метрик; pooled precision/recall/F1 рассчитаны по объединённым out-of-fold решениям.
 
-Повторный запуск неизменённого `technology_baseline.py` на тех же локальных данных и pinned зависимостях дал:
+Повторный запуск неизменённого `../experiments/technology_baseline.py` на тех же локальных данных и pinned зависимостях дал:
 
 | Проверка | Результат |
 |---|---:|
@@ -56,17 +56,17 @@ Macro AP и суммы TP/FN/FP независимо пересчитаны по
 
 | Severity | Location | Finding | Classification and action |
 |---|---|---|---|
-| P2 | `technology_baseline.py:334-354`; `technology_baseline_report.md:90-97` | Pooled AP ranks scores from eight separately fitted models. Fold score scales/calibration are not guaranteed comparable; `DummyClassifier` scores are each fold's train prior. Values 0.220 and 0.147 are correctly computed over pooled scores but can reflect between-fold score differences, not only within-event ranking. | Methodological limitation confirmed by Reviewer. No code correction; use macro AP as the cleaner primary summary and treat pooled AP as descriptive, not global ranking ability. |
-| P2 | `technology_baseline.py:206-214`; `data_audit_report.md:90-104` | There are only 8 event groups, winner share varies 9.2–28.2%, and TreeHacks appears in three years. | External validity is limited. Do not infer performance on arbitrary/future hackathons or claim precise between-event uncertainty. |
+| P2 | `../experiments/technology_baseline.py:334-354`; `technology_baseline_report.md:90-97` | Pooled AP ranks scores from eight separately fitted models. Fold score scales/calibration are not guaranteed comparable; `DummyClassifier` scores are each fold's train prior. Values 0.220 and 0.147 are correctly computed over pooled scores but can reflect between-fold score differences, not only within-event ranking. | Methodological limitation confirmed by Reviewer. No code correction; use macro AP as the cleaner primary summary and treat pooled AP as descriptive, not global ranking ability. |
+| P2 | `../experiments/technology_baseline.py:206-214`; `data_audit_report.md:90-104` | There are only 8 event groups, winner share varies 9.2–28.2%, and TreeHacks appears in three years. | External validity is limited. Do not infer performance on arbitrary/future hackathons or claim precise between-event uncertainty. |
 | P2 | `technology_baseline_report.md:158-160`; `data_quality_eda_report.md:97-103` | Historical availability of `built_with` is unconfirmed; previous Devpost label spot-checks returned HTTP 403. | Already disclosed in prior reports. Retrospective snapshot classification only; no pre-event prediction claim and no independent ground-truth confirmation. |
-| P3 | `technology_baseline.py:128,228-234,297-309`; `technology_baseline_report.md:154` | In train, `technology_count` equals the sum of binary indicators and is algebraically redundant. Many tags are rare; correlated-feature coefficients are not independent or causal effects. | Interpretation limitation already disclosed. Does not itself invalidate predictions; coefficients are educational diagnostics, not technology rankings. |
-| P3 | `technology_baseline.py:96-111,125-133` | `load_data()` checks row count, classes, HackTech absence and one-to-one merge, but does not assert exact equality between analytical IDs and source IDs excluding HackTech. | Future-input guard gap only. Independent exact-ID comparison found no missing or extra IDs in this run; no observed result defect, so no code change. |
+| P3 | `../experiments/technology_baseline.py:128,228-234,297-309`; `technology_baseline_report.md:154` | In train, `technology_count` equals the sum of binary indicators and is algebraically redundant. Many tags are rare; correlated-feature coefficients are not independent or causal effects. | Interpretation limitation already disclosed. Does not itself invalidate predictions; coefficients are educational diagnostics, not technology rankings. |
+| P3 | `../experiments/technology_baseline.py:96-111,125-133` | `load_data()` checks row count, classes, HackTech absence and one-to-one merge, but does not assert exact equality between analytical IDs and source IDs excluding HackTech. | Future-input guard gap only. Independent exact-ID comparison found no missing or extra IDs in this run; no observed result defect, so no code change. |
 
 Сравнение с `DummyClassifier(strategy="prior")` корректно для заданного trivial baseline: те же строки и folds, train-only prior, никакой информации из `X`. При доле победителей ниже 50% он предсказывает всех как non-winner, поэтому F1=0 — ожидаемое свойство baseline, а не свидетельство высокой практической ценности LR. Это отправная точка, не сильный конкурент.
 
 ## 7. Итог и план NumPy-реализации
 
-**PASS WITH FINDINGS.** Техническая схема годится как эталон для самостоятельной реализации: данные, группы, признаки, train-only preprocessing, фиксированный порог и метрики определены и воспроизводятся. Для численного совпадения с sklearn нужно отдельно согласовать порядок признаков, intercept, L2-регуляризацию и её нормировку, параметры solver/tolerance и scaling; `requirements-ml.txt` фиксирует sklearn 1.9.1. Разные оптимизаторы могут давать небольшие различия коэффициентов без ошибки.
+**PASS WITH FINDINGS.** Техническая схема годится как эталон для самостоятельной реализации: данные, группы, признаки, train-only preprocessing, фиксированный порог и метрики определены и воспроизводятся. Для численного совпадения с sklearn нужно отдельно согласовать порядок признаков, intercept, L2-регуляризацию и её нормировку, параметры solver/tolerance и scaling; [`../requirements-ml.txt`](../requirements-ml.txt) фиксирует sklearn 1.9.1. Разные оптимизаторы могут давать небольшие различия коэффициентов без ошибки.
 
 Рекомендуемый учебный порядок — без написания реализации в рамках этого аудита:
 

@@ -1,6 +1,6 @@
 # Технологический metadata baseline: retrospective LOHO
 
-**Дата:** 2026-11-09T10:53:12+00:00<br>
+**Дата:** 2026-11-10T16:49:30+00:00<br>
 **Источник:** `twangodev/devpost-hacks`, pinned revision `3cb29f15841c7b61fd78a20ff12127e0846dc227`; использован уже загруженный cache и подготовленная таблица из 2 161 проекта.<br>
 **Статус:** ретроспективный эксперимент на сохранённом snapshot. Это не проверенная модель прогноза до судейства.
 
@@ -98,7 +98,7 @@ LogisticRegression превзошла Dummy по F1 в **3/8** events и по av
 
 ## Ошибки и коэффициенты
 
-Ошибки — out-of-fold false positives/false negatives; ID и прогнозы сохраняются отдельно в `data/processed/technology_baseline_errors.csv` (локальная таблица под `/data/`, не исходные тексты). Counts сгруппированы ниже.
+Ошибки — out-of-fold false positives/false negatives; ID и прогнозы сохраняются отдельно в `../data/processed/technology_baseline_errors.csv` (локальная таблица под `/data/`, не исходные тексты). Counts сгруппированы ниже.
 
 | Held-out event | Model | Error | Projects |
 |---|---|---|---:|
@@ -123,7 +123,7 @@ LogisticRegression превзошла Dummy по F1 в **3/8** events и по av
 | treehacks-2026 | logistic_regression | false_negative | 57 |
 | treehacks-2026 | logistic_regression | false_positive | 18 |
 
-Полная таблица fitted coefficients по fold лежит в `technology_baseline_coefficients.csv`. Здесь показаны средние коэффициенты технологий, встречавшихся минимум в 4 train vocabularies и имеющих support не менее 20 train projects в каждом таком fold. Порог нужен только для читаемости диагностики; он не меняет модель.
+Полная таблица fitted coefficients по fold лежит в `../results/baseline/technology_baseline_coefficients.csv`. Здесь показаны средние коэффициенты технологий, встречавшихся минимум в 4 train vocabularies и имеющих support не менее 20 train projects в каждом таком fold. Порог нужен только для читаемости диагностики; он не меняет модель.
 
 Средние наиболее положительные коэффициенты:
 
@@ -163,14 +163,14 @@ LogisticRegression превзошла Dummy по F1 в **3/8** events и по av
 
 ## Воспроизведение
 
-Python 3.12; версии и только прямые зависимости: `requirements-ml.txt`.
+Python 3.12; версии и только прямые зависимости: [`requirements-ml.txt`](../requirements-ml.txt).
 
 ```bash
 uv venv .venv --python 3.12
 uv pip install --python .venv/Scripts/python.exe -r requirements-ml.txt
-.venv/Scripts/python.exe technology_baseline.py
+.venv/Scripts/python.exe experiments/technology_baseline.py
 ```
 
-Скрипт использует локальные `data/raw/devpost-hacks-3cb29f15841c7b61fd78a20ff12127e0846dc227.jsonl` и `data/processed/analytical_projects.csv`; ничего не скачивает. Результаты: `technology_baseline_results.csv`, `technology_baseline_coefficients.csv`, `technology_tag_summary.csv`, `technology_tag_screening.csv`; подробные per-project ошибки остаются в игнорируемой `data/processed/`.
+Скрипт использует локальные `../data/raw/devpost-hacks-3cb29f15841c7b61fd78a20ff12127e0846dc227.jsonl` и `../data/processed/analytical_projects.csv`; ничего не скачивает. Результаты: `../results/baseline/technology_baseline_results.csv`, `../results/baseline/technology_baseline_coefficients.csv`, `../results/baseline/technology_tag_summary.csv`, `../results/baseline/technology_tag_screening.csv`; подробные per-project ошибки остаются в игнорируемой `../data/processed/`.
 
 **Версии запуска:** numpy 2.5.4, pandas 3.1.1, scikit-learn 1.9.1.

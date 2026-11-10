@@ -23,15 +23,15 @@ from sklearn.preprocessing import MultiLabelBinarizer, StandardScaler
 from sklearn.linear_model import LogisticRegression
 
 REVISION = "3cb29f15841c7b61fd78a20ff12127e0846dc227"
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 PINNED_JSONL = ROOT / "data" / "raw" / f"devpost-hacks-{REVISION}.jsonl"
 ANALYTICAL_CSV = ROOT / "data" / "processed" / "analytical_projects.csv"
-RESULTS_CSV = ROOT / "technology_baseline_results.csv"
-COEFFICIENTS_CSV = ROOT / "technology_baseline_coefficients.csv"
-TAG_SUMMARY_CSV = ROOT / "technology_tag_summary.csv"
-TAG_SCREEN_CSV = ROOT / "technology_tag_screening.csv"
+RESULTS_CSV = ROOT / "results" / "baseline" / "technology_baseline_results.csv"
+COEFFICIENTS_CSV = ROOT / "results" / "baseline" / "technology_baseline_coefficients.csv"
+TAG_SUMMARY_CSV = ROOT / "results" / "baseline" / "technology_tag_summary.csv"
+TAG_SCREEN_CSV = ROOT / "results" / "baseline" / "technology_tag_screening.csv"
 ERRORS_CSV = ROOT / "data" / "processed" / "technology_baseline_errors.csv"
-REPORT_MD = ROOT / "technology_baseline_report.md"
+REPORT_MD = ROOT / "reports" / "technology_baseline_report.md"
 EXPECTED_ROWS = 2161
 EXPECTED_WINNERS = 363
 UNPUBLISHED_EVENT = "hacktech-by-caltech-2026"
@@ -490,13 +490,13 @@ LogisticRegression превзошла Dummy по F1 в **{lr_f1_better}/8** even
 
 ## Ошибки и коэффициенты
 
-Ошибки — out-of-fold false positives/false negatives; ID и прогнозы сохраняются отдельно в `data/processed/technology_baseline_errors.csv` (локальная таблица под `/data/`, не исходные тексты). Counts сгруппированы ниже.
+Ошибки — out-of-fold false positives/false negatives; ID и прогнозы сохраняются отдельно в `../data/processed/technology_baseline_errors.csv` (локальная таблица под `/data/`, не исходные тексты). Counts сгруппированы ниже.
 
 | Held-out event | Model | Error | Projects |
 |---|---|---|---:|
 {error_table}
 
-Полная таблица fitted coefficients по fold лежит в `technology_baseline_coefficients.csv`. Здесь показаны средние коэффициенты технологий, встречавшихся минимум в 4 train vocabularies и имеющих support не менее 20 train projects в каждом таком fold. Порог нужен только для читаемости диагностики; он не меняет модель.
+Полная таблица fitted coefficients по fold лежит в `../results/baseline/technology_baseline_coefficients.csv`. Здесь показаны средние коэффициенты технологий, встречавшихся минимум в 4 train vocabularies и имеющих support не менее 20 train projects в каждом таком fold. Порог нужен только для читаемости диагностики; он не меняет модель.
 
 Средние наиболее положительные коэффициенты:
 
@@ -522,15 +522,15 @@ LogisticRegression превзошла Dummy по F1 в **{lr_f1_better}/8** even
 
 ## Воспроизведение
 
-Python 3.12; версии и только прямые зависимости: `requirements-ml.txt`.
+Python 3.12; версии и только прямые зависимости: [`requirements-ml.txt`](../requirements-ml.txt).
 
 ```bash
 uv venv .venv --python 3.12
 uv pip install --python .venv/Scripts/python.exe -r requirements-ml.txt
-.venv/Scripts/python.exe technology_baseline.py
+.venv/Scripts/python.exe experiments/technology_baseline.py
 ```
 
-Скрипт использует локальные `data/raw/devpost-hacks-{REVISION}.jsonl` и `data/processed/analytical_projects.csv`; ничего не скачивает. Результаты: `technology_baseline_results.csv`, `technology_baseline_coefficients.csv`, `technology_tag_summary.csv`, `technology_tag_screening.csv`; подробные per-project ошибки остаются в игнорируемой `data/processed/`.
+Скрипт использует локальные `../data/raw/devpost-hacks-{REVISION}.jsonl` и `../data/processed/analytical_projects.csv`; ничего не скачивает. Результаты: `../results/baseline/technology_baseline_results.csv`, `../results/baseline/technology_baseline_coefficients.csv`, `../results/baseline/technology_tag_summary.csv`, `../results/baseline/technology_tag_screening.csv`; подробные per-project ошибки остаются в игнорируемой `../data/processed/`.
 
 **Версии запуска:** numpy {np.__version__}, pandas {pd.__version__}, scikit-learn {sklearn.__version__}.
 '''

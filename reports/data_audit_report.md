@@ -4,11 +4,11 @@
 
 **Вердикт: GO условно для metadata-only baseline; PIVOT для metadata + repository structure; STOP для metadata + LLM features сейчас.** В источнике 2 222 строки, но 61 строка `hacktech-by-caltech-2026` исключена из labels: dataset card говорит, что результаты не были опубликованы при сборе. Остаются 2 161 известных исходов в 8 событиях, каждое содержит оба класса. Это годится для пилотной group-based оценки, но не для сильных выводов о переносимости. Все четыре запроса Devpost получили HTTP 403; spot-check не подтвердил метки. Модели не обучались.
 
-**Дата аудита:** 2026-11-08T10:55:36+00:00.
+**Дата аудита:** 2026-11-10T16:59:28+00:00.
 **Источник:** [Hugging Face dataset](https://huggingface.co/datasets/twangodev/devpost-hacks)
 **Закреплённая revision:** `3cb29f15841c7b61fd78a20ff12127e0846dc227`; Hugging Face API сообщает последнее изменение `2026-04-28T04:55:48Z`.
 **Rows API:** `https://datasets-server.huggingface.co/rows?dataset=twangodev/devpost-hacks&config=all&split=train&revision=3cb29f15841c7b61fd78a20ff12127e0846dc227`.
-**Source cache:** `data\raw\devpost-hacks-3cb29f15841c7b61fd78a20ff12127e0846dc227.jsonl` — исходные строки JSONL отдельно от кода; файл данных не коммитить.
+**Source cache:** `../data/raw/devpost-hacks-3cb29f15841c7b61fd78a20ff12127e0846dc227.jsonl` — исходные строки JSONL отдельно от кода; файл данных не коммитить.
 
 ## Подтверждённые результаты
 
@@ -118,16 +118,16 @@ Null означает `None`; пустые строки и пустые спис
 Python 3.10+; только standard library, установка пакетов не нужна.
 
 ```bash
-python data_audit.py
+python scripts/data_audit.py
 ```
 
-Скрипт запрашивает Hugging Face rows API с revision `3cb29f15841c7b61fd78a20ff12127e0846dc227` и кэширует JSONL в `data/raw/`. Повторный запуск использует cache. Для повторной загрузки той же revision:
+Скрипт запрашивает Hugging Face rows API с revision `3cb29f15841c7b61fd78a20ff12127e0846dc227` и кэширует JSONL в `../data/raw/`. Повторный запуск использует cache. Для повторной загрузки той же revision:
 
 ```bash
-python data_audit.py --refresh
+python scripts/data_audit.py --refresh
 ```
 
-Результаты записываются в `data_audit_summary.csv` и `data_audit_report.md`. Spot-check ограничен четырьмя запросами и сохраняется в pinned cache; при повторе новые Devpost-запросы не отправляются. `--no-devpost-check` пропускает их.
+Сводка записывается в `../results/audit/data_audit_summary.csv`; этот отчёт генерируется в `../reports/data_audit_report.md`. Spot-check ограничен четырьмя запросами и сохраняется в pinned cache; при повторе новые Devpost-запросы не отправляются. `--no-devpost-check` пропускает их.
 
 ## Ограничения
 

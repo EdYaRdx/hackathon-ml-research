@@ -1,6 +1,6 @@
 # Data Quality Enrichment + EDA: Hackathon ML Research
 
-**Дата:** 2026-11-08T12:07:11+00:00<br>
+**Дата:** 2026-11-10T16:59:51+00:00<br>
 **Источник:** [twangodev/devpost-hacks](https://huggingface.co/datasets/twangodev/devpost-hacks), pinned revision `3cb29f15841c7b61fd78a20ff12127e0846dc227`.<br>
 **Unit:** один Devpost project; исходные строки не изменялись. HackTech 2026 исключён из target, потому что источник сообщает, что результатов ещё не было при сборе.
 
@@ -32,7 +32,7 @@
 
 Самая низкая/высокая доля winner среди учтённых events: `hackgt-12` (9.2%) и `treehacks-2025` (28.2%). Технические теги и ссылки также различаются между events; это может отражать разные задачи, правила, submission patterns и состав участников.
 
-![Доли winners по событиям](eda_event_winner_share.svg)
+![Доли winners по событиям](../results/eda/eda_event_winner_share.svg)
 
 ## Technologies и текстовая длина
 
@@ -51,13 +51,13 @@
 | next.js | 288 | 59 | 229 | 16.3% | 12.7% |
 | claude | 285 | 42 | 243 | 11.6% | 13.5% |
 
-Среднее количество `built_with` тегов: winners **9.26**, non-winners **7.98**; подробное распределение лежит в `eda_technology_count_distribution.csv`.
+Среднее количество `built_with` тегов: winners **9.26**, non-winners **7.98**; подробное распределение лежит в `../results/eda/eda_technology_count_distribution.csv`.
 
-![Распространённость частых технологий](eda_top_technologies.svg)
+![Распространённость частых технологий](../results/eda/eda_top_technologies.svg)
 
 Длины измерены в Unicode characters и whitespace-delimited words; это не semantic quality. Median description length: winners **4795 chars** (p90 8666), non-winners **3509 chars** (p90 7256); median tagline: winners **118**, non-winners **129 chars**. Missing/blank values исключены из статистики: description **0/2161**, tagline **0/2161**. Распределения асимметричны; mean/median не следует интерпретировать как качество.
 
-![Длины описаний и tagline](eda_text_lengths.svg)
+![Длины описаний и tagline](../results/eda/eda_text_lengths.svg)
 
 ## GitHub, README, video и limited link check
 
@@ -74,9 +74,9 @@ Presence в snapshot отличается от текущей HTTP-доступ�
 | Y | Y | N | 249 | 36 | 213 |
 | Y | Y | Y | 1060 | 221 | 839 |
 
-![Пересечение ссылок и материалов](eda_link_coverage.svg)
+![Пересечение ссылок и материалов](../results/eda/eda_link_coverage.svg)
 
-Limited check: детерминированно выбрано **16** projects (по одному winner и non-winner на каждый из восьми eligible events); для каждого было проверено не более одной GitHub URL и одной video URL — **21** однократных `HEAD` запросов максимум. Пауза 1.0s, timeout 15s, без retries, авторизации, обхода anti-bot, repository cloning или video download. Link status cache хранит individual project IDs/URLs только под `data/raw/` (ignored, не публиковать).
+Limited check: детерминированно выбрано **16** projects (по одному winner и non-winner на каждый из восьми eligible events); для каждого было проверено не более одной GitHub URL и одной video URL — **21** однократных `HEAD` запросов максимум. Пауза 1.0s, timeout 15s, без retries, авторизации, обхода anti-bot, repository cloning или video download. Link status cache хранит individual project IDs/URLs только под `../data/raw/` (ignored, не публиковать).
 
 | Link type | HTTP/network status | Checks |
 |---|---|---:|
@@ -100,11 +100,11 @@ Limited check: детерминированно выбрано **16** projects (
 | `results` / `is_winner` | Outcome поле | Target only; исключить из X |
 | Текущий HTTP status | Измерен после snapshot | Нет; volatile future state |
 
-Полный feature inventory с dtype/missing/leakage/disposition — `eda_feature_inventory.csv`. По структуре dataset нет явного timestamp на поля проекта, поэтому из этой выгрузки нельзя доказать доступность feature до окончания хакатона. Любой baseline здесь должен быть помечен как retrospective association/prediction-on-snapshot, если не будет найден point-in-time snapshot.
+Полный feature inventory с dtype/missing/leakage/disposition — `../results/eda/eda_feature_inventory.csv`. По структуре dataset нет явного timestamp на поля проекта, поэтому из этой выгрузки нельзя доказать доступность feature до окончания хакатона. Любой baseline здесь должен быть помечен как retrospective association/prediction-on-snapshot, если не будет найден point-in-time snapshot.
 
 ## Структурная подвыборка и решение
 
-GitHub URL + непустой embedded README дает **1309** known projects: 257 winners и 1052 non-winners, по событиям распределено следующим образом (таблица `eda_github_readme_by_event.csv`). Объём выглядит достаточным для следующего **feature-extraction pilot** без массовой загрузки репозиториев, но частичный README coverage может быть selection-biased. Перед сравнениями A vs A+B нужно сравнивать A на том же subset, зафиксировать критерии отбора и проверить local/pinned README usability. `available README` не подтверждает, что связанный GitHub repository всё ещё публичен.
+GitHub URL + непустой embedded README дает **1309** known projects: 257 winners и 1052 non-winners, по событиям распределено следующим образом (таблица `../results/eda/eda_github_readme_by_event.csv`). Объём выглядит достаточным для следующего **feature-extraction pilot** без массовой загрузки репозиториев, но частичный README coverage может быть selection-biased. Перед сравнениями A vs A+B нужно сравнивать A на том же subset, зафиксировать критерии отбора и проверить local/pinned README usability. `available README` не подтверждает, что связанный GitHub repository всё ещё публичен.
 
 ## Ограничения и неизвестное
 
@@ -119,7 +119,7 @@ GitHub URL + непустой embedded README дает **1309** known projects: 
 Python 3.10+; стандартная библиотека, без установки зависимостей.
 
 ```bash
-python data_quality_eda.py
+python scripts/data_quality_eda.py
 ```
 
-Скрипт использует existing pinned cache из `data/raw/`, пишет row-level table без описаний/URLs в ignored `data/processed/`, агрегаты и SVG-графики в корень. External link checks ограничены 16 projects/максимум 32 URL, результаты кэшируются под ignored `data/raw/`. `--refresh-link-checks` повторяет эту ограниченную проверку; `--skip-link-checks` пропускает сеть. Исходный cache не меняется.
+Скрипт использует existing pinned cache из `../data/raw/`, пишет row-level table без описаний/URLs в ignored `../data/processed/`, агрегаты и SVG-графики в `../results/eda/`. External link checks ограничены 16 projects/максимум 32 URL; результаты сохраняются в ignored `../data/raw/`. `--refresh-link-checks` повторяет ограниченную проверку. `--skip-link-checks` не отправляет запросы: использует individual cache, а если его нет — существующую агрегированную сводку; индивидуальные данные не восстанавливаются.

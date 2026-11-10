@@ -25,10 +25,13 @@ from pathlib import Path
 
 REVISION = "3cb29f15841c7b61fd78a20ff12127e0846dc227"
 DATASET_URL = "https://huggingface.co/datasets/twangodev/devpost-hacks"
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "data" / "raw" / f"devpost-hacks-{REVISION}.jsonl"
 LINK_CACHE = ROOT / "data" / "raw" / f"eda-link-checks-{REVISION}.json"
 OUT = ROOT / "data" / "processed"
+EDA_RESULTS = ROOT / "results" / "eda"
+LINK_SUMMARY_CSV = EDA_RESULTS / "eda_link_check_summary.csv"
+REPORT_PATH = ROOT / "reports" / "data_quality_eda_report.md"
 EXPECTED_SOURCE_ROWS = 2222
 UNPUBLISHED_EVENTS = {"hacktech-by-caltech-2026"}
 MAX_SAMPLE_PROJECTS = 100
@@ -38,7 +41,7 @@ REQUEST_DELAY_SECONDS = 1.0
 
 def read_rows() -> list[dict]:
     if not SOURCE.is_file():
-        raise FileNotFoundError(f"Pinned source cache missing: {SOURCE}; run data_audit.py first")
+        raise FileNotFoundError(f"Pinned source cache missing: {SOURCE}; run scripts/data_audit.py first")
     rows = [json.loads(line) for line in SOURCE.read_text(encoding="utf-8").split("\n") if line]
     if len(rows) != EXPECTED_SOURCE_ROWS:
         raise RuntimeError(f"Pinned cache has {len(rows)} rows; expected {EXPECTED_SOURCE_ROWS}")
@@ -208,7 +211,7 @@ def summarize(rows: list[dict], projects: list[dict]) -> dict:
             technology_stats[technology] += 1
             technology_by_outcome[project["outcome"]][technology] += 1
     technology_summary = []
-    for technology, total in technology_stats.most_common():
+    for technology, total in sorted(technology_stats.items(), key=lambda item: (-item[1], item[0])):
         winner_n = technology_by_outcome["winner"][technology]
         non_winner_n = technology_by_outcome["non_winner"][technology]
         technology_summary.append({
@@ -361,6 +364,17 @@ def check_one_url(url: str, link_type: str, project: dict) -> dict:
 
 def perform_link_checks(projects: list[dict], refresh: bool, skip: bool) -> tuple[list[dict], int]:
     if skip:
+        if LINK_CACHE.exists():
+            cached = json.loads(LINK_CACHE.read_text(encoding="utf-8"))
+            return cached["checks"], int(cached["sample_projects"])
+        if LINK_SUMMARY_CSV.exists():
+            with LINK_SUMMARY_CSV.open(newline="", encoding="utf-8-sig") as f:
+                checks = [
+                    {"link_type": row["link_type"], "host_category": row["host_category"], "status": row["status"]}
+                    for row in csv.DictReader(f)
+                    for _ in range(int(row["checks"]))
+                ]
+            return checks, len(build_stratified_sample(projects))
         return [], 0
     if LINK_CACHE.exists() and not refresh:
         cached = json.loads(LINK_CACHE.read_text(encoding="utf-8"))
@@ -444,6 +458,7 @@ def write_svg(path: Path, width: int, height: int, title: str, body: str) -> Non
     style = "text{font-family:system-ui,sans-serif;fill:#111827;paint-order:stroke;stroke:#fff;stroke-width:2px;stroke-linejoin:round}.muted{fill:#64748b}.winner{fill:#2563eb}.nonwinner{fill:#d97706}.axis{stroke:#94a3b8;stroke-width:1}.track{fill:#cbd5e1;opacity:.45}"
     svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" aria-label="{html.escape(title, quote=True)}">'
            f'<style>{style}</style>{svg_text(24, 30, title, size=20)}{body}</svg>')
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(svg, encoding="utf-8")
 
 
@@ -458,7 +473,7 @@ def chart_events(events: list[dict]) -> None:
         body.append(f'<rect x="{x0}" y="{y - 10}" width="{chart_w * share / .35:.1f}" height="17" rx="4" class="winner"/>')
         body.append(svg_text(x0 + chart_w + 12, y + 5, f"{share:.1%}  ({row['winners']}/{row['projects']})", "", 13))
     body.append(svg_text(x0, height - 20, "HackTech 2026 omitted: results unpublished when collected.", "muted", 12))
-    write_svg(ROOT / "eda_event_winner_share.svg", width, height, "Known winner share varies across hackathons", "".join(body))
+    write_svg(EDA_RESULTS / "eda_event_winner_share.svg", width, height, "Known winner share varies across hackathons", "".join(body))
 
 
 def chart_technologies(technology_summary: list[dict], total_known: int) -> None:
@@ -475,7 +490,7 @@ def chart_technologies(technology_summary: list[dict], total_known: int) -> None
         body.append(svg_text(x0 + chart_w + 10, y + 3, f"W {win_rate:.1%}, n={row['winner_projects']}", "muted", 11))
         body.append(svg_text(x0 + chart_w + 10, y + 17, f"NW {non_rate:.1%}, n={row['non_winner_projects']}", "muted", 11))
     body.append(svg_text(x0, height - 14, f"Top tags by total projects; n={total_known}.", "muted", 12))
-    write_svg(ROOT / "eda_top_technologies.svg", width, height, "Technology tags are uneven across classes", "".join(body))
+    write_svg(EDA_RESULTS / "eda_top_technologies.svg", width, height, "Technology tags are uneven across classes", "".join(body))
 
 
 def chart_availability(intersections: list[dict]) -> None:
@@ -488,7 +503,7 @@ def chart_availability(intersections: list[dict]) -> None:
         body.append(svg_text(x0 - 14, y + 5, label, "", 13, "end"))
         body.append(f'<rect x="{x0}" y="{y - 9}" width="{chart_w * row["projects"] / max(1, max(x["projects"] for x in ordered)):.1f}" height="18" rx="4" class="track"/>')
         body.append(svg_text(x0 + chart_w + 12, y + 5, f"{row['projects']} (W {row['winners']}, NW {row['non_winners']})", "", 12))
-    write_svg(ROOT / "eda_link_coverage.svg", width, height, "Link and documentation coverage intersection", "".join(body))
+    write_svg(EDA_RESULTS / "eda_link_coverage.svg", width, height, "Link and documentation coverage intersection", "".join(body))
 
 
 def chart_lengths(text_summary: list[dict]) -> None:
@@ -505,7 +520,7 @@ def chart_lengths(text_summary: list[dict]) -> None:
         body.append(svg_text(x0 + chart_w + 12, y + 5, f"p50={row['p50']}  p90={row['p90']}  observed={row['observed']}", "", 12))
 
 
-    write_svg(ROOT / "eda_text_lengths.svg", width, height, "Median description and tagline lengths by outcome", "".join(body))
+    write_svg(EDA_RESULTS / "eda_text_lengths.svg", width, height, "Median description and tagline lengths by outcome", "".join(body))
 
 def report_text(summary: dict, checks: list[dict], sample_n: int) -> str:
     n = summary["n_known"]
@@ -580,7 +595,7 @@ def report_text(summary: dict, checks: list[dict], sample_n: int) -> str:
 
 Самая низкая/высокая доля winner среди учтённых events: `{event_deltas[0]['hackathon']}` ({event_deltas[0]['winner_share']:.1%}) и `{event_deltas[-1]['hackathon']}` ({event_deltas[-1]['winner_share']:.1%}). Технические теги и ссылки также различаются между events; это может отражать разные задачи, правила, submission patterns и состав участников.
 
-![Доли winners по событиям](eda_event_winner_share.svg)
+![Доли winners по событиям](../results/eda/eda_event_winner_share.svg)
 
 ## Technologies и текстовая длина
 
@@ -590,13 +605,13 @@ def report_text(summary: dict, checks: list[dict], sample_n: int) -> str:
 |---|---:|---:|---:|---:|---:|
 {top_table}
 
-Среднее количество `built_with` тегов: winners **{mean([p['built_with_count'] for p in summary['known_by_outcome']['winner']]):.2f}**, non-winners **{mean([p['built_with_count'] for p in summary['known_by_outcome']['non_winner']]):.2f}**; подробное распределение лежит в `eda_technology_count_distribution.csv`.
+Среднее количество `built_with` тегов: winners **{mean([p['built_with_count'] for p in summary['known_by_outcome']['winner']]):.2f}**, non-winners **{mean([p['built_with_count'] for p in summary['known_by_outcome']['non_winner']]):.2f}**; подробное распределение лежит в `../results/eda/eda_technology_count_distribution.csv`.
 
-![Распространённость частых технологий](eda_top_technologies.svg)
+![Распространённость частых технологий](../results/eda/eda_top_technologies.svg)
 
 Длины измерены в Unicode characters и whitespace-delimited words; это не semantic quality. Median description length: winners **{d_w['p50']} chars** (p90 {d_w['p90']}), non-winners **{d_n['p50']} chars** (p90 {d_n['p90']}); median tagline: winners **{t_w['p50']}**, non-winners **{t_n['p50']} chars**. Missing/blank values исключены из статистики: description **{desc_missing}/{n}**, tagline **{tagline_missing}/{n}**. Распределения асимметричны; mean/median не следует интерпретировать как качество.
 
-![Длины описаний и tagline](eda_text_lengths.svg)
+![Длины описаний и tagline](../results/eda/eda_text_lengths.svg)
 
 ## GitHub, README, video и limited link check
 
@@ -606,9 +621,9 @@ Presence в snapshot отличается от текущей HTTP-доступ�
 |---|---|---|---:|---:|---:|
 {intersection_table}
 
-![Пересечение ссылок и материалов](eda_link_coverage.svg)
+![Пересечение ссылок и материалов](../results/eda/eda_link_coverage.svg)
 
-Limited check: детерминированно выбрано **{sample_n}** projects (по одному winner и non-winner на каждый из восьми eligible events); для каждого было проверено не более одной GitHub URL и одной video URL — **{len(checks)}** однократных `HEAD` запросов максимум. Пауза {REQUEST_DELAY_SECONDS:.1f}s, timeout 15s, без retries, авторизации, обхода anti-bot, repository cloning или video download. Link status cache хранит individual project IDs/URLs только под `data/raw/` (ignored, не публиковать).
+Limited check: детерминированно выбрано **{sample_n}** projects (по одному winner и non-winner на каждый из восьми eligible events); для каждого было проверено не более одной GitHub URL и одной video URL — **{len(checks)}** однократных `HEAD` запросов максимум. Пауза {REQUEST_DELAY_SECONDS:.1f}s, timeout 15s, без retries, авторизации, обхода anti-bot, repository cloning или video download. Link status cache хранит individual project IDs/URLs только под `../data/raw/` (ignored, не публиковать).
 
 | Link type | HTTP/network status | Checks |
 |---|---|---:|
@@ -630,11 +645,11 @@ Limited check: детерминированно выбрано **{sample_n}** pr
 | `results` / `is_winner` | Outcome поле | Target only; исключить из X |
 | Текущий HTTP status | Измерен после snapshot | Нет; volatile future state |
 
-Полный feature inventory с dtype/missing/leakage/disposition — `eda_feature_inventory.csv`. По структуре dataset нет явного timestamp на поля проекта, поэтому из этой выгрузки нельзя доказать доступность feature до окончания хакатона. Любой baseline здесь должен быть помечен как retrospective association/prediction-on-snapshot, если не будет найден point-in-time snapshot.
+Полный feature inventory с dtype/missing/leakage/disposition — `../results/eda/eda_feature_inventory.csv`. По структуре dataset нет явного timestamp на поля проекта, поэтому из этой выгрузки нельзя доказать доступность feature до окончания хакатона. Любой baseline здесь должен быть помечен как retrospective association/prediction-on-snapshot, если не будет найден point-in-time snapshot.
 
 ## Структурная подвыборка и решение
 
-GitHub URL + непустой embedded README дает **{github_readme_count}** known projects: {gr_winners} winners и {gr_non} non-winners, по событиям распределено следующим образом (таблица `eda_github_readme_by_event.csv`). Объём выглядит достаточным для следующего **feature-extraction pilot** без массовой загрузки репозиториев, но частичный README coverage может быть selection-biased. Перед сравнениями A vs A+B нужно сравнивать A на том же subset, зафиксировать критерии отбора и проверить local/pinned README usability. `available README` не подтверждает, что связанный GitHub repository всё ещё публичен.
+GitHub URL + непустой embedded README дает **{github_readme_count}** known projects: {gr_winners} winners и {gr_non} non-winners, по событиям распределено следующим образом (таблица `../results/eda/eda_github_readme_by_event.csv`). Объём выглядит достаточным для следующего **feature-extraction pilot** без массовой загрузки репозиториев, но частичный README coverage может быть selection-biased. Перед сравнениями A vs A+B нужно сравнивать A на том же subset, зафиксировать критерии отбора и проверить local/pinned README usability. `available README` не подтверждает, что связанный GitHub repository всё ещё публичен.
 
 ## Ограничения и неизвестное
 
@@ -649,17 +664,17 @@ GitHub URL + непустой embedded README дает **{github_readme_count}**
 Python 3.10+; стандартная библиотека, без установки зависимостей.
 
 ```bash
-python data_quality_eda.py
+python scripts/data_quality_eda.py
 ```
 
-Скрипт использует existing pinned cache из `data/raw/`, пишет row-level table без описаний/URLs в ignored `data/processed/`, агрегаты и SVG-графики в корень. External link checks ограничены 16 projects/максимум 32 URL, результаты кэшируются под ignored `data/raw/`. `--refresh-link-checks` повторяет эту ограниченную проверку; `--skip-link-checks` пропускает сеть. Исходный cache не меняется.
+Скрипт использует existing pinned cache из `../data/raw/`, пишет row-level table без описаний/URLs в ignored `../data/processed/`, агрегаты и SVG-графики в `../results/eda/`. External link checks ограничены 16 projects/максимум 32 URL; результаты сохраняются в ignored `../data/raw/`. `--refresh-link-checks` повторяет ограниченную проверку. `--skip-link-checks` не отправляет запросы: использует individual cache, а если его нет — существующую агрегированную сводку; индивидуальные данные не восстанавливаются.
 '''
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--refresh-link-checks", action="store_true", help="repeat bounded HEAD checks for the same 16-project sample")
-    parser.add_argument("--skip-link-checks", action="store_true", help="do not send external HTTP requests")
+    parser.add_argument("--skip-link-checks", action="store_true", help="do not send HTTP requests; reuse the existing cache if available")
     args = parser.parse_args()
     raw = read_rows()
     projects_all = [make_project(row) for row in raw]
@@ -679,22 +694,22 @@ def main() -> int:
     write_csv(OUT / "analytical_projects.csv", analytical_rows(projects), fields)
 
     event_fields = list(summary["events"][0])
-    write_csv(ROOT / "eda_event_summary.csv", summary["events"], event_fields)
+    write_csv(EDA_RESULTS / "eda_event_summary.csv", summary["events"], event_fields)
     tech_fields = list(summary["technology_summary"][0])
-    write_csv(ROOT / "eda_technology_summary.csv", summary["technology_summary"], tech_fields)
-    write_csv(ROOT / "eda_technology_count_distribution.csv", summary["technology_count_distribution"],
+    write_csv(EDA_RESULTS / "eda_technology_summary.csv", summary["technology_summary"], tech_fields)
+    write_csv(EDA_RESULTS / "eda_technology_count_distribution.csv", summary["technology_count_distribution"],
               ["built_with_count", "winner_projects", "non_winner_projects"])
-    write_csv(ROOT / "eda_availability_intersections.csv", summary["intersections"],
+    write_csv(EDA_RESULTS / "eda_availability_intersections.csv", summary["intersections"],
               ["github_url_present", "readme_content_present", "video_link_present", "projects", "winners", "non_winners", "winner_share"])
-    write_csv(ROOT / "eda_text_length_summary.csv", summary["text_summary"],
+    write_csv(EDA_RESULTS / "eda_text_length_summary.csv", summary["text_summary"],
               ["outcome", "measure", "projects", "observed", "missing", "mean", "p50", "p75", "p90", "maximum"])
-    write_csv(ROOT / "eda_github_readme_by_event.csv", summary["github_readme_by_event"],
+    write_csv(EDA_RESULTS / "eda_github_readme_by_event.csv", summary["github_readme_by_event"],
               ["hackathon", "projects", "winners", "non_winners"])
 
     checks, sample_n = perform_link_checks(projects, args.refresh_link_checks, args.skip_link_checks)
-    write_csv(ROOT / "eda_link_check_summary.csv", summarize_link_checks(checks),
+    write_csv(LINK_SUMMARY_CSV, summarize_link_checks(checks),
               ["link_type", "host_category", "status", "checks"])
-    write_csv(ROOT / "eda_feature_inventory.csv", feature_inventory(summary),
+    write_csv(EDA_RESULTS / "eda_feature_inventory.csv", feature_inventory(summary),
               ["feature", "extraction", "dtype", "missing_share_known", "possible_outcome_leakage",
                "known_available_before_hackathon_end", "first_baseline", "notes"])
 
@@ -702,7 +717,8 @@ def main() -> int:
     chart_technologies(summary["technology_summary"], summary["n_known"])
     chart_availability(summary["intersections"])
     chart_lengths(summary["text_summary"])
-    (ROOT / "data_quality_eda_report.md").write_text(report_text(summary, checks, sample_n), encoding="utf-8")
+    REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    REPORT_PATH.write_text(report_text(summary, checks, sample_n), encoding="utf-8")
     print(json.dumps({
         "revision": REVISION, "source_rows": len(raw), "analytical_projects": len(projects),
         "winners": sum(p["outcome"] == "winner" for p in projects),
@@ -712,7 +728,7 @@ def main() -> int:
         "readme_content_all": summary["readme_content_count_all"],
         "empty_readme_records_all": summary["empty_readme_records_all"],
         "link_sample_projects": sample_n, "link_checks": len(checks),
-        "report": str(ROOT / "data_quality_eda_report.md"),
+        "report": str(REPORT_PATH),
     }, ensure_ascii=False, indent=2))
     return 0
 

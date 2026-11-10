@@ -26,10 +26,10 @@ from pathlib import Path
 DATASET = "twangodev/devpost-hacks"
 REVISION = "3cb29f15841c7b61fd78a20ff12127e0846dc227"
 BASE_API = "https://datasets-server.huggingface.co/rows"
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 CACHE = ROOT / "data" / "raw" / f"{DATASET.split('/')[-1]}-{REVISION}.jsonl"
-CSV_PATH = ROOT / "data_audit_summary.csv"
-REPORT_PATH = ROOT / "data_audit_report.md"
+CSV_PATH = ROOT / "results" / "audit" / "data_audit_summary.csv"
+REPORT_PATH = ROOT / "reports" / "data_audit_report.md"
 DEVPOST_CHECK_CACHE = ROOT / "data" / "raw" / f"devpost-spotcheck-{REVISION}.json"
 PAGE_SIZE = 100
 EXPECTED_ROWS = 2222
@@ -289,6 +289,7 @@ def write_csv(stats: dict) -> None:
     fields = ["hackathon", "projects", "winner", "non_winner", "unknown_result", "winner_share_known",
               "missing_results", "missing_is_winner", "projects_with_github_links", "github_link_count",
               "projects_with_readme", "unique_readme_repositories", "unique_github_link_repositories"]
+    CSV_PATH.parent.mkdir(parents=True, exist_ok=True)
     with CSV_PATH.open("w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
@@ -333,7 +334,7 @@ def write_report(stats: dict, source: dict, devpost_checks: list[dict]) -> None:
 **Источник:** [Hugging Face dataset](https://huggingface.co/datasets/{DATASET})
 **Закреплённая revision:** `{REVISION}`; Hugging Face API сообщает последнее изменение `{SOURCE_LAST_MODIFIED}`.
 **Rows API:** `https://datasets-server.huggingface.co/rows?dataset={DATASET}&config=all&split=train&revision={REVISION}`.
-**Source cache:** `{source['path']}` — исходные строки JSONL отдельно от кода; файл данных не коммитить.
+**Source cache:** `../{Path(source['path']).as_posix()}` — исходные строки JSONL отдельно от кода; файл данных не коммитить.
 
 ## Подтверждённые результаты
 
@@ -407,16 +408,16 @@ Null означает `None`; пустые строки и пустые спис
 Python 3.10+; только standard library, установка пакетов не нужна.
 
 ```bash
-python data_audit.py
+python scripts/data_audit.py
 ```
 
-Скрипт запрашивает Hugging Face rows API с revision `{REVISION}` и кэширует JSONL в `data/raw/`. Повторный запуск использует cache. Для повторной загрузки той же revision:
+Скрипт запрашивает Hugging Face rows API с revision `{REVISION}` и кэширует JSONL в `../data/raw/`. Повторный запуск использует cache. Для повторной загрузки той же revision:
 
 ```bash
-python data_audit.py --refresh
+python scripts/data_audit.py --refresh
 ```
 
-Результаты записываются в `data_audit_summary.csv` и `data_audit_report.md`. Spot-check ограничен четырьмя запросами и сохраняется в pinned cache; при повторе новые Devpost-запросы не отправляются. `--no-devpost-check` пропускает их.
+Сводка записывается в `../results/audit/data_audit_summary.csv`; этот отчёт генерируется в `../reports/data_audit_report.md`. Spot-check ограничен четырьмя запросами и сохраняется в pinned cache; при повторе новые Devpost-запросы не отправляются. `--no-devpost-check` пропускает их.
 
 ## Ограничения
 
@@ -426,6 +427,7 @@ python data_audit.py --refresh
 4. Leakage screening лексический; временные метки текста отсутствуют.
 5. Модели, метрики, power/calibration не оценивались.
 '''
+    REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
     REPORT_PATH.write_text(report, encoding="utf-8")
 
 
